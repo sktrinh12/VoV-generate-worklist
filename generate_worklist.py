@@ -58,7 +58,7 @@ parser.add_argument('-bf', '--buffer', metavar = 'ADD_BUFFER', type = int,
 parser.add_argument('-cw', '--concwaste', metavar = 'CONCAT_WASTE', type = int,
                     nargs = 2, choices = range(2), help = '0 is for False and 1 is for True; concatenating the waste labware to the end of the serial titration worklist; second argument is to set a shift or not for serial dilution (related to --serial arg)')
 parser.add_argument('-srd', '--serdown', metavar = 'SERIALDILUTE_DOWN', type = int, nargs = 3, choices = range(13), help = 'first argument is what column to change for alphanumeric wellids, second argument is the number to shift the source wellid, third argument is the number to shift the destination wellid')
-parser.add_argument('-add', '--adddst', metavar = 'ADD_DEST', type = int, nargs = 1, choices = range(9), help = 'add to the destination position id a certain number of positions to shift it')
+parser.add_argument('-add', '--addsd', metavar = 'ADD_SOURCE_DEST', type = str, nargs = '+', choices = [x + y for x in [chr(l) for l in range(65,73)] for y in [chr(l) for l in range(65,73)]] + [str(x) for x in range(9)], help = 'first argument is the location where to change the pid (0=source, 1=destination, 2=both); second argument is to add to the source or destination position id a certain number of positions to shift it; the third and fourth argment are the source & destination column numbers to start at; fifth argument is concentration of both well id prefix for alphanumeric to change the original well id to, should be a letter such as A-H')
 
 headers = ["SOURCE_POSITION","SOURCE_LABWARE","DESTINATION_POSITION","DESTINATION_LABWARE","VOL"]
 CR = "\n"
@@ -528,18 +528,39 @@ def dilute_step_down(worklist, column, src_adder, dst_adder):
     return new_worklist
 
 
-def incr_dst_pid(worklist, dst_adder):
+def incr_pid(worklist, location, adder, src_colm_nbr=0, dst_colm_nbr=0, concat_letters=None):
     """
-    increment the position id or well id of the labware
+    increment the position id or well id of the labware, location would either be 0 (source), 1 (destination) or 2 (both), colm_nbr is the starting column number to begin the well id at; in this case it is for the vertically positioned 40-tube rack and Reformat 96-w plate; concat_letters are letters A-H for source and destination starting well ids
     """
+    adder = int(adder)
+    src_colm_nbr = int(src_colm_nbr)
+    dst_colm_nbr = int(dst_colm_nbr)
+
+    if concat_letters:
+        src_start_letter, dst_start_letter = (l for l in concat_letters)
+
     new_worklist = []
     for i, row in enumerate(worklist):
         row_ = row.split(",")
-        current_pid = row_[2]
-        letter = current_pid[0]
-        ascii_nbr = ord(letter)
-        letter = chr(ascii_nbr + dst_adder)
-        new_row = f"{row_[0]},{row_[1]},{letter}{current_pid[1:]},{row_[3]},{row_[4]}"
+        dst_pid = row_[2]
+        dst_colm = int(dst_pid[1:]) + dst_colm_nbr
+        dst_letter = dst_pid[0]
+        src_pid = row_[0]
+        src_letter = src_pid[0]
+        if re.search('[A-H]', src_pid):
+            src_colm =  int(src_pid[1:]) + src_colm_nbr
+        else:
+            src_colm = ""
+        if location in ["0", "2"]:
+            src_ascii_nbr = ord(src_letter)
+            src_letter = chr(src_ascii_nbr + adder)
+        if location in ["1", "2"]:
+            dst_ascii_nbr = ord(dst_letter)
+            dst_letter = chr(dst_ascii_nbr + adder)
+        if concat_letters:
+            src_letter = src_start_letter
+            dst_letter = dst_start_letter
+        new_row = f"{src_letter}{src_colm},{row_[1]},{dst_letter}{dst_colm},{row_[3]},{row_[4]}"
         new_worklist.append(new_row)
     return new_worklist
 
@@ -617,8 +638,12 @@ if __name__ == "__main__":
             worklist = incr_src_colm(worklist, args.buffer[0])
         if args.serdown:
             worklist = dilute_step_down(worklist, args.serdown[0], args.serdown[1], args.serdown[2])
-        if args.adddst:
-            worklist = incr_dst_pid(worklist, args.adddst[0])
+        if args.addsd: # add src dest adders
+            if len(args.addsd) > 2:
+                worklist = incr_pid(worklist, args.addsd[0], args.addsd[1], args.addsd[2], args.addsd[3], args.addsd[4])
+            else:
+                worklist = incr_pid(worklist, args.addsd[0], args.addsd[1])
+
         for row in worklist:
             f.write(row)
 
