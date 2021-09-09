@@ -58,7 +58,7 @@ parser.add_argument('-bf', '--buffer', metavar = 'ADD_BUFFER', type = int,
 parser.add_argument('-cw', '--concwaste', metavar = 'CONCAT_WASTE', type = int,
                     nargs = 2, choices = range(2), help = '0 is for False and 1 is for True; concatenating the waste labware to the end of the serial titration worklist; second argument is to set a shift or not for serial dilution (related to --serial arg)')
 parser.add_argument('-srd', '--serdown', metavar = 'SERIALDILUTE_DOWN', type = int, nargs = 3, choices = range(13), help = 'first argument is what column to change for alphanumeric wellids, second argument is the number to shift the source wellid, third argument is the number to shift the destination wellid')
-parser.add_argument('-add', '--addsd', metavar = 'ADD_SOURCE_DEST', type = str, nargs = '+', choices = [x + y for x in [chr(l) for l in range(65,73)] for y in [chr(l) for l in range(65,73)]] + [str(x) for x in range(9)], help = 'first argument is the location where to change the pid (0=source, 1=destination, 2=both); second argument is to add to the source or destination position id a certain number of positions to shift it; the third and fourth argment are the source & destination column numbers to start at; fifth argument is concentration of both well id prefix for alphanumeric to change the original well id to, should be a letter such as A-H')
+parser.add_argument('-add', '--addsd', metavar = 'ADD_SOURCE_DEST', type = str, nargs = '+', choices = [x + y for x in [chr(l) for l in range(65,73)] for y in [chr(l) for l in range(65,73)]] + [str(x) for x in range(9)], help = 'first argument is the location where to change the pid (0=source, 1=destination, 2=both); second argument is to add to the source or destination position id a certain number of positions to shift it; the third and fourth argment are the source & destination column numbers to start at; fifth argument is concentration of both well id prefix for alphanumeric to change the original well id to, should be a letter such as AH')
 
 headers = ["SOURCE_POSITION","SOURCE_LABWARE","DESTINATION_POSITION","DESTINATION_LABWARE","VOL"]
 CR = "\n"
@@ -174,8 +174,8 @@ def set_wellid_number(worklist):
         if abset[0] > 32:
             src_adder = 1
             abset = [x-32 for x in abset] # need this to move on to next labware that starts index at 1 again
-    except Exception:
-        pass
+    except Exception as e:
+        print(f'error: {e}')
 
     for i, row in enumerate(worklist):
         row_ = row.split(",")
@@ -299,8 +299,8 @@ def partial_displace(worklist, rows):
     """
 
     adder = 3
-    if args.tubef[2] == 1:
-        adder += 1
+    #if args.tubef[2] == 1:
+    #    adder += 1
     
     def get_pid(row, idx):
        return row.split(',')[idx]
@@ -312,7 +312,7 @@ def partial_displace(worklist, rows):
 
     # orig_dst_pid = [get_pid(p, 2) for p in copy_wl]
 
-    cnt_letter_dct = {k:0 for k in 'ABCDEFGH'}
+    #cnt_letter_dct = {k:0 for k in 'ABCDEFGH'}
     num_rows = int(rows*8)
     partial_worklist_bottom = []
     cnt = 0
@@ -321,7 +321,7 @@ def partial_displace(worklist, rows):
         spl_row = dpl_row.split(",")
         if args.tubef[0] in [1,2]: # if both src/dst or just dst
             letter = spl_row[2][0] # the letter of wellid
-            cnt_letter_dct[letter] += 1 # count the letter
+            #cnt_letter_dct[letter] += 1 # count the letter
             ord_d_pid = ord(letter) + adder # add three
             ord_d_pid = ord_d_pid % 70
             if ord_d_pid < 65:
@@ -339,11 +339,11 @@ def partial_displace(worklist, rows):
             dstlw = f"{spl_row[3][:-1]}{dstlw_cnt}"
         else:
             dstlw = spl_row[3]
-        print(dstlw)
+        #print(dstlw)
 
         if args.tubef[0] in [0,1]: # if just src or only or src/dst
             letter = spl_row[0][0]
-            cnt_letter_dct[letter] += 1
+            #cnt_letter_dct[letter] += 1
             ord_s_pid = ord(letter) + adder
             ord_s_pid = ord_s_pid % 70
             if ord_s_pid < 65:
@@ -550,7 +550,7 @@ def incr_pid(worklist, location, adder, src_colm_nbr=0, dst_colm_nbr=0, concat_l
         if re.search('[A-H]', src_pid):
             src_colm =  int(src_pid[1:]) + src_colm_nbr
         else:
-            src_colm = ""
+            src_colm = src_pid[1:]
         if location in ["0", "2"]:
             src_ascii_nbr = ord(src_letter)
             src_letter = chr(src_ascii_nbr + adder)
