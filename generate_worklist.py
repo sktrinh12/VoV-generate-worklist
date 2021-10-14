@@ -519,8 +519,12 @@ def dilute_step_down(worklist, column, src_adder, dst_adder):
     for i, row in enumerate(worklist):
         row_ = row.split(",")
         char_src = chr(start_src + (i*2))
+        if char_src == "F":
+            char_src = f"s{char_src}"
         char_src = f"{char_src}{column}" 
         char_dst = chr(start_dst+ (i*2))
+        if char_dst == "F":
+            char_dst = f"s{chr_dst}"
         char_dst = f"{char_dst}{column}"
         new_row = f"{char_src},{row_[1]},{char_dst},{row_[3]},{row_[4]}"
         #print(new_row)
