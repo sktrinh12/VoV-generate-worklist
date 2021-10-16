@@ -59,6 +59,7 @@ parser.add_argument('-cw', '--concwaste', metavar = 'CONCAT_WASTE', type = int,
                     nargs = 2, choices = range(2), help = '0 is for False and 1 is for True; concatenating the waste labware to the end of the serial titration worklist; second argument is to set a shift or not for serial dilution (related to --serial arg)')
 parser.add_argument('-srd', '--serdown', metavar = 'SERIALDILUTE_DOWN', type = int, nargs = 3, choices = range(13), help = 'first argument is what column to change for alphanumeric wellids, second argument is the number to shift the source wellid, third argument is the number to shift the destination wellid')
 parser.add_argument('-add', '--addsd', metavar = 'ADD_SOURCE_DEST', type = str, nargs = '+', choices = [x + y for x in [chr(l) for l in range(65,73)] for y in [chr(l) for l in range(65,73)]] + [str(x) for x in range(9)], help = 'first argument is the location where to change the pid (0=source, 1=destination, 2=both); second argument is to add to the source or destination position id a certain number of positions to shift it; the third and fourth argment are the source & destination column numbers to start at; fifth argument is concentration of both well id prefix for alphanumeric to change the original well id to, should be a letter such as AH')
+parser.add_argument('-rm', '--remove', metavar = 'REMOVE_ENTIRE_ROW', type = int, nargs = 2, choices = range(0,9), help = 'remove an entire row from worklist. This was designed for LEGO since it will not use the first column (when rotated 90 degrees) so from A1-H1. just supply two arguments which is the integer number of the row to exclude, and the position either source or destination to check for that particular position id.')
 
 headers = ["SOURCE_POSITION","SOURCE_LABWARE","DESTINATION_POSITION","DESTINATION_LABWARE","VOL"]
 CR = "\n"
@@ -531,6 +532,19 @@ def dilute_step_down(worklist, column, src_adder, dst_adder):
         new_worklist.append(new_row)
     return new_worklist
 
+def remove_row(worklist, row_nbr, position):
+    """
+    remove the entire row from the current worklist, just supply two arguments to specify what row to exclude, range from 1-8, and the position, either source or destination
+    """
+
+    new_worklist = []
+    for i, row in enumerate(worklist):
+        row_ = row.split(",")
+        if not bool(re.search(f'[A-H]{row_nbr}',row_[position])) :
+            new_worklist.append(row)
+    print(new_worklist)
+    return new_worklist
+
 
 def incr_pid(worklist, location, adder, src_colm_nbr=0, dst_colm_nbr=0, concat_letters=None):
     """
@@ -647,6 +661,8 @@ if __name__ == "__main__":
                 worklist = incr_pid(worklist, args.addsd[0], args.addsd[1], args.addsd[2], args.addsd[3], args.addsd[4])
             else:
                 worklist = incr_pid(worklist, args.addsd[0], args.addsd[1])
+        if args.remove:
+            worklist = remove_row(worklist, args.remove[0], args.remove[1])
 
         for row in worklist:
             f.write(row)
